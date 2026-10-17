@@ -1,0 +1,86 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f6fb;
+  color: #17233b;
+}
+
+header {
+  background: #153e75;
+  color: white;
+  padding: 25px;
+  text-align: center;
+}
+
+main {
+  max-width: 1100px;
+  margin: 25px auto;
+  padding: 0 16px;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 22px;
+  margin-bottom: 22px;
+  box-shadow: 0 3px 12px #0000000d;
+}
+
+form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+input, button {
+  padding: 11px;
+  border-radius: 6px;
+  border: 1px solid #ccd3df;
+}
+
+input {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+button {
+  background: #1769aa;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #104d80;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 15px;
+}
+
+table {
+  width: 100%;
+  min-width: 700px;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid #e4e8ef;
+  text-align: left;
+}
+
+th {
+  background: #edf3fa;
+}
+
+@media (max-width: 600px) {
+  .card {
+    padding: 14px;
+  }
+}
