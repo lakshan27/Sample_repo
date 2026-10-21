@@ -1,120 +1,178 @@
-const API = "http://localhost:8080/api/products";
+const STORAGE_KEY = "orderPriorityPlanner";
 
 const form = document.getElementById("productForm");
 const table = document.getElementById("products");
 const message = document.getElementById("message");
+const refreshBtn = document.getElementById("refreshBtn");
 
-async function apiRequest(url, options = {}) {
-  const response = await fetch(url, options);
 
-  if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
-  }
-
-  if (response.status === 204) return null;
-  return response.json();
+function getOrders() {
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
 }
 
-form.addEventListener("submit", async (event) => {
+
+function saveOrders(orders) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+}
+
+
+function predictOrder(order) {
+  const predictedDemand = order.dailySales * order.leadTime;
+  const reorderQuantity = Math.max(
+    0,
+    predictedDemand - order.currentStock
+  );
+
+  let priority;
+  let status;
+
+  if (order.currentStock <= 0) {
+    priority = 1;
+    status = "Critical";
+  } else if (order.currentStock <= predictedDemand * 0.5) {
+    priority = 1;
+    status = "High";
+  } else if (order.currentStock <= predictedDemand) {
+    priority = 2;
+    status = "Medium";
+  } else {
+    priority = 3;
+    status = "Low";
+  }
+
+  return {
+    predictedDemand,
+    reorderQuantity,
+    priority,
+    status
+  };
+}
+
+
+form.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  const product = {
-    name: document.getElementById("name").value.trim(),
-    currentStock: Number(document.getElementById("stock").value),
-    dailySales: Number(document.getElementById("sales").value),
-    leadTime: Number(document.getElementById("lead").value)
+  const name = document.getElementById("name").value.trim();
+  const currentStock = Number(
+    document.getElementById("stock").value
+  );
+  const dailySales = Number(
+    document.getElementById("sales").value
+  );
+  const leadTime = Number(
+    document.getElementById("lead").value
+  );
+
+  if (
+    !name ||
+    !Number.isFinite(currentStock) ||
+    !Number.isFinite(dailySales) ||
+    !Number.isFinite(leadTime) ||
+    currentStock < 0 ||
+    dailySales < 0 ||
+    leadTime <= 0
+  ) {
+    message.textContent =
+      "Enter a name, non-negative stock and sales, and a positive lead time.";
+    return;
+  }
+
+  const orders = getOrders();
+
+  const order = {
+    id: crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random()}`,
+    name,
+    orderDate: new Date().toLocaleDateString(),
+    currentStock,
+    dailySales,
+    leadTime,
+    createdAt: Date.now()
   };
 
-  try {
-    await apiRequest(API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(product)
-    });
+  orders.push(order);
+  saveOrders(orders);
 
-    message.textContent = "Product added successfully!";
-    form.reset();
-    await loadProducts();
-  } catch (error) {
-    message.textContent =
-      "Failed to add product. Check Spring Boot and MySQL.";
-  }
+  message.textContent = "Order added successfully!";
+  form.reset();
+
+  loadOrders();
 });
 
-async function loadProducts() {
+
+function loadOrders() {
   table.replaceChildren();
 
-  try {
-    const products = await apiRequest(API);
+  const orders = getOrders();
 
-    if (products.length === 0) {
-      const row = table.insertRow();
-      const cell = row.insertCell();
-      cell.colSpan = 6;
-      cell.textContent = "No products available.";
-      return;
-    }
+  orders.sort((a, b) => {
+    const priorityA = predictOrder(a).priority;
+    const priorityB = predictOrder(b).priority;
 
-    for (const product of products) {
-      const row = table.insertRow();
+    return priorityA - priorityB ||
+      a.createdAt - b.createdAt;
+  });
 
-      [
-        product.name,
-        product.currentStock,
-        product.dailySales,
-        product.leadTime + " days"
-      ].forEach(value => {
-        row.insertCell().textContent = value;
-      });
+  if (orders.length === 0) {
+    const row = table.insertRow();
+    const cell = row.insertCell();
 
-      const predictionCell = row.insertCell();
-      const predictButton = document.createElement("button");
-      predictButton.textContent = "Predict";
+    cell.colSpan = 7;
+    cell.textContent = "No orders available.";
+    return;
+  }
 
-      predictButton.onclick = async () => {
-        predictionCell.textContent = "Predicting...";
+  for (const order of orders) {
+    const prediction = predictOrder(order);
+    const row = table.insertRow();
 
-        try {
-          const result = await apiRequest(
-            `${API}/${product.id}/prediction`
-          );
+    [
+      order.name,
+      order.orderDate,
+      order.currentStock,
+      order.dailySales,
+      `${order.leadTime} days`,
+      prediction.status
+    ].forEach((value) => {
+      row.insertCell().textContent = value;
+    });
 
-          predictionCell.textContent =
-            `${result.status} | Demand: ${result.predicted_demand}` +
-            ` | Reorder: ${result.reorder_quantity}`;
-        } catch (error) {
-          predictionCell.textContent = "Prediction unavailable";
-        }
-      };
+    const actionCell = row.insertCell();
 
-      predictionCell.appendChild(predictButton);
+    const predictButton = document.createElement("button");
+    predictButton.textContent = "View Prediction";
 
-      const actionCell = row.insertCell();
-      const deleteButton = document.createElement("button");
-      deleteButton.textContent = "Delete";
+    predictButton.addEventListener("click", () => {
+      alert(
+        `Order: ${order.name}\n` +
+        `Priority: ${prediction.status}\n` +
+        `Predicted Demand: ${prediction.predictedDemand}\n` +
+        `Reorder Quantity: ${prediction.reorderQuantity}`
+      );
+    });
 
-      deleteButton.onclick = async () => {
-        if (!confirm(`Delete ${product.name}?`)) return;
+    const deleteButton = document.createElement("button");
+    deleteButton.textContent = "Delete";
 
-        try {
-          await apiRequest(`${API}/${product.id}`, {
-            method: "DELETE"
-          });
-          await loadProducts();
-        } catch (error) {
-          message.textContent = "Delete failed.";
-        }
-      };
+    deleteButton.addEventListener("click", () => {
+      if (!confirm(`Delete order "${order.name}"?`)) {
+        return;
+      }
 
-      actionCell.appendChild(deleteButton);
-    }
-  } catch (error) {
-    message.textContent =
-      "Cannot connect to Spring Boot. Check port 8080.";
+      saveOrders(
+        getOrders().filter((item) => item.id !== order.id)
+      );
+
+      message.textContent = "Order deleted successfully.";
+      loadOrders();
+    });
+
+    actionCell.append(predictButton, deleteButton);
   }
 }
 
-document.getElementById("refreshBtn")
-  .addEventListener("click", loadProducts);
 
-loadProducts();
+refreshBtn.addEventListener("click", loadOrders);
+
+loadOrders();
