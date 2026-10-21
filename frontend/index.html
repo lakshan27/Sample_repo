@@ -3,27 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Smart Stock AI</title>
-  <link rel="stylesheet" href="style.css">
+  <title>PackNext!!</title>
+  <link rel="stylesheet" href="Style.css">
 </head>
 <body>
   <header>
-    <h1>Smart Stock AI</h1>
-    <p>Inventory Dashboard & Demand Prediction</p>
+    <h1>Order Priority Planner</h1>
+    <p>Build a deterministic ready to pack with mandatory search,filters,updates ...</p>
   </header>
 
   <main>
     <section class="card">
-      <h2>Add Product</h2>
-      <form id="productForm">
-        <input id="name" placeholder="Product name" required>
-        <input id="stock" type="number" min="0"
-               placeholder="Current stock" required>
-        <input id="sales" type="number" min="0" step="0.1"
-               placeholder="Daily sales" required>
-        <input id="lead" type="number" min="1"
-               placeholder="Lead time (days)" required>
-        <button type="submit">Add Product</button>
+      <h2>Add Orders</h2>
+      <form id="orderForm">
+        <input id="name" placeholder="Order name" required>
+        <input id="job_id" type="number" min="0" required>
+        <input id="o_date" type="number" min="0" step="0.1"
+               placeholder="order placed date" required>
+        <input id="materials required" type="number" min="1"
+               placeholder="Materials_req (quantity)" required>
+        <input id="status" type="number" min="0" required>
+        <button type="submit">Add Orders</button>
       </form>
       <p id="message"></p>
     </section>
@@ -36,11 +36,11 @@
           <thead>
             <tr>
               <th>Name</th>
-              <th>Stock</th>
-              <th>Daily Sales</th>
-              <th>Lead Time</th>
-              <th>AI Prediction</th>
+              <th>job_id</th>
+              <th>o_date</th>
+              <th>materials required</th>
               <th>Action</th>
+              <th>status</th>
             </tr>
           </thead>
           <tbody id="products"></tbody>
